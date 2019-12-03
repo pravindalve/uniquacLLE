@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, 'C:/Users/FOSSEE/PycharmProjects/uniqacLLE')
 import numpy as np
 from functions import  der_uniquac_delG_mix, uniquac_delG_mix, uniquac_gamma
 from scipy.optimize import fsolve
@@ -47,14 +49,14 @@ my_constraint = ({'type':'eq', 'fun':sumrestrict})
 x1e = np.array([0.853166507572777, 0.016252662016868, 0.130580830410355])
 x2e = np.array([0.192831909302274, 0.038388700754375, 0.768779389943351])
 
-dist1res = scipy.optimize.minimize(Dist, x1e, method='SLSQP', args = (x1e), options={'disp': False}, tol = 1e-10, 
+dist1res = scipy.optimize.minimize(Dist, x1e, method='SLSQP', args = (x1e), options={'disp': False}, 
                                     bounds = tuple(zip(np.maximum(x1e - 0.1, 0.001),np.minimum(x1e + 0.1, 0.999))), constraints = my_constraint)
 
-dist2res = scipy.optimize.minimize(Dist, x2e, method='SLSQP', args = (x2e), options={'disp': False}, tol = 1e-8,
-                                    bounds = tuple(zip(np.maximum(x2e - 0.2, 0.001),np.minimum(x2e + 0.2, 0.999))), constraints = my_constraint)
+dist2res = scipy.optimize.minimize(Dist, x2e, method='SLSQP', args = (x2e), options={'disp': False},
+                                    bounds = tuple(zip(np.maximum(x2e - 0.1, 0.001),np.minimum(x2e + 0.1, 0.999))), constraints = my_constraint)
 
 print(dist1res)
 print(dist2res)
 coef1 = der_uniquac_delG_mix(x1e, 0, T, acalc, q, r)
-coef2 = der_uniquac_delG_mix(x2e, 1, T, acalc, q, r)
+coef2 = der_uniquac_delG_mix(x2e, 0, T, acalc, q, r)
 print(abs(coef1 - coef2))

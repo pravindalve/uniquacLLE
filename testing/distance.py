@@ -94,7 +94,9 @@ dist1 = 1
 dist2 = 1
 x1ef = np.empty(3)
 x2ef = np.full(3, -1)
-while dist1 > 1e-7 or dist2 > 1e-7:
+coef1 = 1
+coef2 = 2
+while dist1 > 1e-6 or dist2 > 1e-6 or abs(coef1 - coef2) > 50:
 	x1e = np.full(3,-1)
 	x2e = np.full(3,-1)
 	diff1 = np.full(2, -1)
@@ -121,7 +123,7 @@ while dist1 > 1e-7 or dist2 > 1e-7:
 	    if all(0 < inp) and all(inp < 1) and 0 < (1 - np.sum(inp[:2])) < 1 and 0 < (1 - np.sum(inp[2:4])) <1:
 	        # print(xIe1, xIe2,xIIe1, xIIe2, bta)
 	        try:
-	            xie = fsolve(equations1, (xIe1, xIe2, xIIe1, xIIe2, bta))
+	            xie = fsolve(equations1, (xIe1, xIe2, xIIe1, xIIe2, bta), xtol = 1e-10)
 	            # print(xie)
 	        except scipy.optimize.nonlin.NoConvergence:
 	            print('not converged')
@@ -140,25 +142,25 @@ while dist1 > 1e-7 or dist2 > 1e-7:
 	    s+=1
 	    # print(s)
 	print(x1e, x2e)
-	dist1res = scipy.optimize.minimize(Dist, x1e, method='SLSQP', args = (x1e), options={'disp': False}, 
+	dist1res = scipy.optimize.minimize(Dist, x1e, method='SLSQP', args = (x1e), options={'disp': False}, tol = 1e-10, 
 									bounds = tuple(zip(np.maximum(x1e - 0.1, 0.001),np.minimum(x1e + 0.1, 0.999))), constraints = my_constraint)
 	# print(dist1res)
-	dist2res = scipy.optimize.minimize(Dist, x2e, method='SLSQP', args = (x2e), options={'disp': False}, 
-									bounds = tuple(zip(np.maximum(x2e - 0.2, 0.001),np.minimum(x2e + 0.2, 0.999))), constraints = my_constraint)
+	dist2res = scipy.optimize.minimize(Dist, x2e, method='SLSQP', args = (x2e), options={'disp': False}, tol = 1e-10,
+									bounds = tuple(zip(np.maximum(x2e - 0.1, 0.001),np.minimum(x2e + 0.1, 0.999))), constraints = my_constraint)
 	
-	# print(tuple(zip(np.maximum(x2e - 0.01, 0.01),np.minimum(x2e + 0.01, 0.999))))
-
 	if dist1 > dist1res.fun:
 		dist1 = dist1res.fun
 		x1ef = x1e
 	if dist2 > dist2res.fun:
 		dist2 = dist2res.fun
 		x2ef = x2e
-		print(x2e)
-		if any(x2ef < 1e-10):
-			print("yahi hai chutiya x2ef " + str(x2ef)) 
 	# print(dist1res)
-	print(dist2res)
+	# print(dist2res)
+
+	coef1 = der_uniquac_delG_mix(x1ef, 0, T, acalc, q, r)
+	coef2 = der_uniquac_delG_mix(x2ef, 0, T, acalc, q, r)
+	print(abs(coef1 - coef2))
+
 	m += 1	
 	print(m)
 	if m > 60:
