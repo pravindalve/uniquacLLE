@@ -1,60 +1,159 @@
+import array
+from numpy import random
+
 import numpy as np
-from functions import  der_uniquac_delG_mix, uniquac_delG_mix, uniquac_gamma
-from scipy.optimize import fsolve
-import scipy
-from state import State
 
 
-T = 298.15
-acalc = [[0 , -384.913, 10.07412],[210.9491, 0, -187.338], [628.0464, -165.228, 0]]
-q = [1.432, 2.4, 4.396]
-r = [1.4311, 3.1878, 5.1742]
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib import rc
 
-def comTanPlane(x, xp):
-    T = 298.15
-    acalc = [[0 , -384.913, 10.07412],[210.9491, 0, -187.338], [628.0464, -165.228, 0]]
-    q = [1.432, 2.4, 4.396]
-    r = [1.4311, 3.1878, 5.1742]
-    comTanP = uniquac_delG_mix(T, xp, acalc, q, r)\
-                     + (der_uniquac_delG_mix(xp, 0, T, acalc, q, r) * (x[0] - xp[0]))\
-                     + (der_uniquac_delG_mix(xp, 1, T, acalc, q, r) * (x[1] - xp[1]))
+rc('animation', embed_limit=30)
+rc('animation', html='jshtml')
 
-    return comTanP
+from deap import algorithms
+from deap import base
+from deap import creator
+from deap import tools
 
 
+X_START = -4
+X_END = 4
+X_STEP = 0.5
 
-def Dist(x, xp):
-    T = 298.15
-    acalc = [[0 , -384.913, 10.07412],[210.9491, 0, -187.338], [628.0464, -165.228, 0]]
-    q = [1.432, 2.4, 4.396]
-    r = [1.4311, 3.1878, 5.1742]
-    if (x[0] + x[1]) >= 1:
-        d = np.inf
-        print("this is not good")
-    else:
-        d = abs(uniquac_delG_mix(T, x, acalc, q, r) - comTanPlane(x, xp))
-        # print('delgmix = ' + str(uniquac_delG_mix(T, x, acalc, q, r)))
-        # print('comPlane = ' + str(comTanPlane(x, xp)))
-        # print('x  = ' + str(x))
-    return d
+def unknown(x):
+    
+    return 1.3*x + 1.9*x**2 - 4.2*x**3 + 5.0
+
+X = np.array([x for x in np.arange(X_START, X_END, X_STEP)])
+
+def sample(inputs):
+    return np.array([unknown(inp) + random.normal(5.) for inp in inputs])
 
 
-def sumrestrict(x):
-    return np.sum(x) - 1
+# observations
 
-my_constraint = ({'type':'eq', 'fun':sumrestrict})
+Y = sample(X)
 
-x1e = np.array([0.853166507572777, 0.016252662016868, 0.130580830410355])
-x2e = np.array([0.192831909302274, 0.038388700754375, 0.768779389943351])
+data = list(zip(X, Y))
 
-dist1res = scipy.optimize.minimize(Dist, x1e, method='SLSQP', args = (x1e), options={'disp': False}, tol = 1e-10, 
-                                    bounds = tuple(zip(np.maximum(x1e - 0.1, 0.001),np.minimum(x1e + 0.1, 0.999))), constraints = my_constraint)
+# some constants
 
-dist2res = scipy.optimize.minimize(Dist, x2e, method='SLSQP', args = (x2e), options={'disp': False}, tol = 1e-8,
-                                    bounds = tuple(zip(np.maximum(x2e - 0.2, 0.001),np.minimum(x2e + 0.2, 0.999))), constraints = my_constraint)
+IND_SIZE = 5
+NGEN = 100
 
-print(dist1res)
-print(dist2res)
-coef1 = der_uniquac_delG_mix(x1e, 0, T, acalc, q, r)
-coef2 = der_uniquac_delG_mix(x2e, 1, T, acalc, q, r)
-print(abs(coef1 - coef2))
+# datatypes def
+
+creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+creator.create("Individual", array.array, typecode="d", fitness=creator.FitnessMin, strategy=None)
+creator.create("Strategy", array.array, typecode="d")
+
+# register functions
+
+# Individual generator
+def generateES(ind_cls, strg_cls, size):
+    ind = ind_cls(random.normal() for _ in range(size))
+    ind.strategy = strg_cls(random.normal() for _ in range(size))
+    return ind
+
+toolbox = base.Toolbox()
+
+# generation functions
+toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
+    IND_SIZE)
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+# evolutionary ops
+toolbox.register("mate", tools.cxESBlend, alpha=0.1)
+toolbox.register("mutate", tools.mutESLogNormal, c=1.0, indpb=0.3)
+toolbox.register("select", tools.selTournament, tournsize=3)
+
+def pred(ind, x):
+    
+    y_ = 0.0
+    
+    for i in range(1,IND_SIZE):
+        y_ += ind[i-1]*x**i
+    
+    y_ += ind[IND_SIZE-1]
+       
+    return y_
+
+def fitness(ind, data):
+    
+    mse = 0.0
+    
+    for x, y in data:
+        
+        y_ = pred(ind, x)
+        mse += (y - y_)**2
+        
+    return mse/len(data),
+
+# fitness eval
+toolbox.register("evaluate", fitness, data=data)
+
+# ES params
+MU, LAMBDA = 10, 100
+
+# register some statistics
+
+stats = tools.Statistics(lambda ind: ind.fitness.values)
+stats.register("avg", np.mean)
+stats.register("std", np.std)
+stats.register("min", np.min)
+stats.register("max", np.max)
+
+# evolve and animate
+
+def evolve_animate():
+    
+    random.seed()
+    
+    # init population
+    pop = toolbox.population(n=MU)
+
+    hof = tools.HallOfFame(1)
+    
+    fig = plt.figure()
+    
+    ax = fig.add_subplot(1, 1, 1)
+    
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    
+    ax.scatter(X, Y, color='g')
+    line, = ax.plot(X, np.zeros(Y.shape))
+
+    def update(best_ind):
+        
+        Y_ = np.array([pred(best_ind, x) for x in X])
+        
+        line.set_ydata(Y_)
+        
+        return line,
+    
+    def init():
+        
+        return update(pop[0])
+    
+    def animate(i):
+        
+        ax.set_title('Gen: {}'.format(i+1))
+        
+        nonlocal pop
+        
+        pop, logbook = algorithms.eaMuCommaLambda(pop, toolbox, mu=MU, lambda_=LAMBDA, 
+            cxpb=0.6, mutpb=0.3, ngen=1, stats=stats, halloffame=hof, verbose=False)
+        
+        best_ind = hof[0]
+        
+        return update(best_ind)
+
+    ani = animation.FuncAnimation(fig, animate, np.arange(NGEN), init_func=None,
+                                  interval=5, blit=True)
+    return ani
+print('running ani')
+ani = evolve_animate()
+
+ani.save('evo-ani.gif', writer='imagemagick', fps=20)

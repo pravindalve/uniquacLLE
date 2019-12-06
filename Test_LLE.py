@@ -28,13 +28,13 @@ xii = [xIIexp[0]]
 # dataset = UniquacLLE(t, xIexp, xIIexp, a, q, r)
 dataset = UniquacLLE(t, xi, xii, [[0,1,1], [1, 0, 1], [1, 1, 0]], q, r)
 
-# value = dataset.optimize_OF1()
-# print(dataset.a_nm)
+value = dataset.optimize_OF1()
+print(dataset.a_nm)
 
 del_g = np.empty(8)
 for i in range(8):
     del_g[i] = uniquac_delG_mix(Texp[i], xIexp[i], a, q, r)
-print(del_g)
+# print(del_g)
 
 Tb = [253.15]
 # ab = [[0, 21.81246], [684.4026, 0]]
@@ -43,30 +43,34 @@ rb = [1.4311, 5.1742]
 
 
 dg = uniquac_delG_mix(253.15, [0.9563, 0.0437], [[0, 1],[1, 0]], [1.432, 4.396], [1.4311, 5.1742])
-print(dg)
+# print(dg)
 gibthree = uniquac_delG_mix(Texp[0], xIexp[0], a, q, r)
 
-for i in range(8):
+for i in range(1):
     x = np.arange(0.01, 0.99, 0.01)
-    y = np.arange(0.01, 0.99, 0.01)
-
-    z = np.empty((98, 98))
+    y = np.empty(98)
 
     for j in range(98):
-        for k in range(98):
-            if (1-x[j] - y[k]) < 0:
-                z[j, k] = 0
-            else:
-                z[j, k] = uniquac_delG_mix(Texp[i], [x[j], y[k], 1-x[j] - y[k]], a, q, r)
-    # plt.title("Gibbs free energy for datapoint " + str(i))
-    #
-    # # Plot the points using matplotlib
-    # plt.plot(x, y)
-    # plt.show()
+    	y[j] = uniquac_delG_mix(298.15, [x[j], 1-x[j]], [[0, 7.3016],[12.319211, 0]], [1.432, 4.396], [1.4311, 5.1742])
+    # y = np.arange(0.01, 0.99, 0.01)
 
-    x, y = np.meshgrid(x, y)
-    z[z == 0.] = np.nan
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    ax.contour3D(x, y, z, 100)
+    # z = np.empty((98, 98))
+
+    # for j in range(98):
+    #     for k in range(98):
+    #         if (1-x[j] - y[k]) < 0:
+    #             z[j, k] = 0
+    #         else:
+    #             z[j, k] = uniquac_delG_mix(Texp[i], [x[j], y[k], 1-x[j] - y[k]], a, q, r)
+    # plt.title("Gibbs free energy for datapoint " + str(i))
+    
+    # Plot the points using matplotlib
+    plt.plot(x, y)
     plt.show()
+
+    # x, y = np.meshgrid(x, y)
+    # z[z == 0.] = np.nan
+    # fig = plt.figure()
+    # ax = fig.gca(projection='3d')
+    # ax.contour3D(x, y, z, 100)
+    # plt.show()

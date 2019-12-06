@@ -19,13 +19,13 @@ class State():
         self.xIIcalc = None
         self.xIiter = self.xIexp
         self.xIIiter = self.xIIexp
-        self.CTP = None
+        self.LLE = None
 
 
-    def check_CTP(self):
+    def update_LLE(self):
         combs = combinations(np.arange(0, len(self.xIexp), 1), 2)
         ls = list(combs)
-        bool_CTP = np.full(len(self.xIexp), None)
+        bool_LLE = np.full(len(self.xIexp), None)
         for comb in ls:
             try:
                 rt1 = newton(der_bin_uniquac_delG_mix, 0.01, maxiter = 10000, args = (self.Texp,
@@ -42,16 +42,16 @@ class State():
                 rt2 = None
 
             if rt1 is not None and rt2 is not None and abs(rt1 - rt2) < 1e-4:
-                bool_CTP[ls.index(comb)] = False
+                bool_LLE[ls.index(comb)] = False
             elif rt1 is not None and rt2 is not None and rt1 != rt2:
-                bool_CTP[ls.index(comb)] = True
+                bool_LLE[ls.index(comb)] = True
             else:
-                bool_CTP[ls.index(comb)] = False
+                bool_LLE[ls.index(comb)] = False
                 # because of this condition if there is inconsistency in BIP and root not found by newton method both are shown as miscible.
                 # when inconsistency is handled just make change in this condition
 
-        if True in bool_CTP:
-            self.CTP = True
+        if True in bool_LLE:
+            self.LLE = True
         else:
-            self.CTP = False
+            self.LLE = False
 
