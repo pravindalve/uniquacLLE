@@ -113,7 +113,7 @@ while dist1 > 1e-6 or dist2 > 1e-6 or abs(coef1 - coef2) > 50:
 	            xie = fsolve(equations, (xIe1, xIe2, xIIe1, xIIe2, bta), xtol = 1e-10)
 	            # xie = least_squares(equations, (xIe1, xIe2, xIIe1, xIIe2, bta), xtol = 1e-10, bounds = ((0,0,0,0,0), (1,1,1,1,1)))
 
-	            # print(xie)
+	            print(xie)
 	        except scipy.optimize.nonlin.NoConvergence:
 	            print('not converged')
 	        except OverflowError:

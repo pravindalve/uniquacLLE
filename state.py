@@ -1,7 +1,8 @@
 from itertools import combinations
 import numpy as np
-from scipy.optimize import newton
-from functions import der_bin_uniquac_delG_mix
+import scipy
+from scipy.optimize import newton, fsolve
+from functions import der_bin_uniquac_delG_mix, uniquac_gamma
 
 
 class State():
@@ -20,6 +21,7 @@ class State():
         self.xIiter = self.xIexp
         self.xIIiter = self.xIIexp
         self.LLE = None
+        self.no_of_comp = len(xIexp)
 
 
     def update_LLE(self):
@@ -54,4 +56,61 @@ class State():
             self.LLE = True
         else:
             self.LLE = False
+
+
+    def equations(self, m):
+        xIe = np.array(list(m[:2])+ list([1- sum(m[:2])]))
+        xIIe = np.array(list(m[2:4])+ list([1- sum(m[2:4])]))
+        bta = m[-1]
+        ze = (xIe + xIIe ) / 2
+        gmaI = np.empty(self.no_of_comp)
+        gmaII = np.array([4.7573733448669, 0.307910263657295, 1.12422266744842])
+        amm = [[0 , -384.913, 10.07412],[210.9491, 0, -187.338], [628.0464, -165.228, 0]]
+
+        for i in range(self.no_of_comp):
+            gmaI[i] = uniquac_gamma(self.Texp, i, xIe, self.a, self.q, self.r)
+            gmaII[i] = uniquac_gamma(self.Texp, i, xIIe, self.a, self.q, self.r)
+
+        ls = xIe * gmaI - xIIe * gmaII
+        ls = np.append(ls, bta*xIe[:len(xIe) - 1] + (1 - bta)*xIIe[:len(xIe) - 1] - ze[:len(xIe) - 1])
+
+        if any(np.isnan(ls[i]) for i in range(5)):
+            ls = np.array([1, 1, 1, 1, 1])
+        return ls
+
+    def update_xcalc(self):
+        x1e = np.full(3,-1)
+        x2e = np.full(3,-1)
+        diff1 = np.full(2, -1)
+        diff2 = np.full(2, -1)
+        xie = np.full(5, -1)
+        while any(xie<=0) or any(xie >= 1) or any(abs(x1e - x2e) < 1e-2) or diff1 > diff2:
+            xIe1 = np.clip(np.random.ranf(), max(0.0,0.75), 0.9)
+            xIe2 = np.clip(np.random.ranf(), 0, 0.2)
+            xIe3 = 1 - xIe1 - xIe2
+            xIIe1 =np.clip(np.random.ranf(), 0, 0.2)
+            xIIe2 = np.clip(np.random.ranf(), 0, 0.1)
+            xIIe3 = 1 - xIIe1 - xIIe2
+
+            bta = np.random.ranf()
+            inp = np.array([xIe1, xIe2, xIIe1, xIIe2, bta])
+            # print(inp)
+            if all(0 < inp) and all(inp < 1) and 0 < (1 - np.sum(inp[:2])) < 1 and 0 < (1 - np.sum(inp[2:4])) <1:
+                try:
+                    xie = fsolve(self.equations, (xIe1, xIe2, xIIe1, xIIe2, bta), xtol = 1e-10)
+                    # print(xie)
+                except scipy.optimize.nonlin.NoConvergence:
+                    print('not converged')
+                except OverflowError:
+                    print('overflow')
+                except RuntimeWarning:
+                    pass
+            diff1 = np.linalg.norm(np.array(xie[:2]) - np.array(self.xIexp[:2]))
+            diff2 = np.linalg.norm(np.array(xie[2:4]) - np.array(self.xIIexp[:2]))
+            x1e = np.array(list(xie[:2]) + list([1 - np.sum(xie[:2])]))
+            x2e = np.array(list(xie[2:4]) + list([1 - np.sum(xie[2:4])]))
+
+        self.xIcalc = x1e
+        self.xIIcalc = x2e
+
 

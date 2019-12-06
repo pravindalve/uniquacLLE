@@ -13,3 +13,6 @@ s = State(298.15, [0.8487, 0.0222, 0.1291], [0.1866, 0.0328, 0.7806],
 print(s)
 s.update_LLE()
 print(s.LLE)
+
+s.update_xcalc()
+print(s.xIcalc, s.xIIcalc)
