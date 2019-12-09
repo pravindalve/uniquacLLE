@@ -25,6 +25,7 @@ class State():
 
 
     def update_LLE(self):
+        #updates boolean variable LLE by checking existence of LLE 
         combs = combinations(np.arange(0, len(self.xIexp), 1), 2)
         ls = list(combs)
         bool_LLE = np.full(len(self.xIexp), None)
@@ -59,13 +60,13 @@ class State():
 
 
     def equations(self, m):
+        #returns list of equations for ternary system 
         xIe = np.array(list(m[:2])+ list([1- sum(m[:2])]))
         xIIe = np.array(list(m[2:4])+ list([1- sum(m[2:4])]))
         bta = m[-1]
         ze = (xIe + xIIe ) / 2
         gmaI = np.empty(self.no_of_comp)
-        gmaII = np.array([4.7573733448669, 0.307910263657295, 1.12422266744842])
-        amm = [[0 , -384.913, 10.07412],[210.9491, 0, -187.338], [628.0464, -165.228, 0]]
+        gmaII = np.empty(self.no_of_comp)
 
         for i in range(self.no_of_comp):
             gmaI[i] = uniquac_gamma(self.Texp, i, xIe, self.a, self.q, self.r)
@@ -79,12 +80,13 @@ class State():
         return ls
 
     def update_xcalc(self):
-        x1e = np.full(3,-1)
-        x2e = np.full(3,-1)
+        # updates xcalc for both the phases of ternary system
+        xIe = np.full(3,-1)
+        xIIe = np.full(3,-1)
         diff1 = np.full(2, -1)
         diff2 = np.full(2, -1)
         xie = np.full(5, -1)
-        while any(xie<=0) or any(xie >= 1) or any(abs(x1e - x2e) < 1e-2) or diff1 > diff2:
+        while any(xie<=0) or any(xie >= 1) or any(abs(xIe - xIIe) < 1e-2) or diff1 > diff2:
             xIe1 = np.clip(np.random.ranf(), max(0.0,0.75), 0.9)
             xIe2 = np.clip(np.random.ranf(), 0, 0.2)
             xIe3 = 1 - xIe1 - xIe2
@@ -103,14 +105,29 @@ class State():
                     print('not converged')
                 except OverflowError:
                     print('overflow')
-                except RuntimeWarning:
-                    pass
+
             diff1 = np.linalg.norm(np.array(xie[:2]) - np.array(self.xIexp[:2]))
             diff2 = np.linalg.norm(np.array(xie[2:4]) - np.array(self.xIIexp[:2]))
-            x1e = np.array(list(xie[:2]) + list([1 - np.sum(xie[:2])]))
-            x2e = np.array(list(xie[2:4]) + list([1 - np.sum(xie[2:4])]))
+            xIe = np.array(list(xie[:2]) + list([1 - np.sum(xie[:2])]))
+            xIIe = np.array(list(xie[2:4]) + list([1 - np.sum(xie[2:4])]))
 
-        self.xIcalc = x1e
-        self.xIIcalc = x2e
+        self.xIcalc = xIe
+        self.xIIcalc = xIIe
 
 
+    def tan_dist(self, x, xp):
+        if (x[0] + x[1]) >= 1:
+            d = np.inf
+            print("this is not good")
+        else:
+            d = abs(uniquac_delG_mix(self.Texp, x, self.a, self.q, self.r) - comTanPlane(x, xp))
+
+        return d
+
+    def com_tan_plane(self, x, xp):
+        
+        com_tan_p = uniquac_delG_mix(self.Texp, xp, self.a, self.q, self.r)\
+                         + (der_uniquac_delG_mix(xp, 0, self.Texp, self.a, self.q, self.r) * (x[0] - xp[0]))\
+                         + (der_uniquac_delG_mix(xp, 1, self.Texp, self.a, self.q, self.r) * (x[1] - xp[1]))
+
+        return com_tan_p

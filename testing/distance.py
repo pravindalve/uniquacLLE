@@ -169,6 +169,6 @@ while dist1 > 1e-6 or dist2 > 1e-6 or abs(coef1 - coef2) > 50:
 		break
 		
 s1 = State(T, x1ef,x2ef, acalc,q,r)
-s1.check_CTP()
-print(s1.CTP)
+s1.update_LLE()
+print(s1.LLE)
 print(s1.xIexp, s1.xIIexp)

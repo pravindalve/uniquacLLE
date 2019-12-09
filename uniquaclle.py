@@ -63,6 +63,6 @@ class UniquacLLE():
         return opt
 
 
-
-
-
+    def evaluate_BIP(self):
+        print('This function is not yet implemented')
+        return self.aguess
