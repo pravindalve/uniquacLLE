@@ -1,8 +1,8 @@
 from itertools import combinations
 import numpy as np
 import scipy
-from scipy.optimize import newton, fsolve
-from functions import der_bin_uniquac_delG_mix, uniquac_gamma
+from scipy.optimize import newton, fsolve, minimize
+from functions import der_bin_uniquac_delG_mix, uniquac_gamma, uniquac_delG_mix, der_uniquac_delG_mix
 
 
 class State():
@@ -16,8 +16,8 @@ class State():
         self.r = r
         self.gI = None
         self.gII = None
-        self.xIcalc = None
-        self.xIIcalc = None
+        self.xIcalc = self.xIexp
+        self.xIIcalc = self.xIIexp
         self.xIiter = self.xIexp
         self.xIIiter = self.xIIexp
         self.LLE = None
@@ -87,11 +87,11 @@ class State():
         diff2 = np.full(2, -1)
         xie = np.full(5, -1)
         while any(xie<=0) or any(xie >= 1) or any(abs(xIe - xIIe) < 1e-2) or diff1 > diff2:
-            xIe1 = np.clip(np.random.ranf(), max(0.0,0.75), 0.9)
-            xIe2 = np.clip(np.random.ranf(), 0, 0.2)
+            xIe1 = np.clip(np.random.ranf(), max(0.0,self.xIcalc[0] - 0.1), min(self.xIcalc[0], 0.999))
+            xIe2 = np.clip(np.random.ranf(), max(0.0,self.xIcalc[1] - 0.1), min(self.xIcalc[1], 0.999))
             xIe3 = 1 - xIe1 - xIe2
-            xIIe1 =np.clip(np.random.ranf(), 0, 0.2)
-            xIIe2 = np.clip(np.random.ranf(), 0, 0.1)
+            xIIe1 =np.clip(np.random.ranf(), max(0.0,self.xIIcalc[0] - 0.1), min(self.xIIcalc[0], 0.999))
+            xIIe2 = np.clip(np.random.ranf(), max(0.0,self.xIIcalc[1] - 0.1), min(self.xIIcalc[1], 0.999))
             xIIe3 = 1 - xIIe1 - xIIe2
 
             bta = np.random.ranf()
@@ -120,7 +120,7 @@ class State():
             d = np.inf
             print("this is not good")
         else:
-            d = abs(uniquac_delG_mix(self.Texp, x, self.a, self.q, self.r) - comTanPlane(x, xp))
+            d = abs(uniquac_delG_mix(self.Texp, x, self.a, self.q, self.r) - self.com_tan_plane(x, xp))
 
         return d
 
@@ -131,3 +131,16 @@ class State():
                          + (der_uniquac_delG_mix(xp, 1, self.Texp, self.a, self.q, self.r) * (x[1] - xp[1]))
 
         return com_tan_p
+
+
+    def min_tan_dist(self, xie):
+        def sumrestrict(x):
+            return np.sum(x) - 1
+
+        my_constraint = ({'type':'eq', 'fun':sumrestrict})
+    
+        distres = scipy.optimize.minimize(self.tan_dist, xie, method='SLSQP', args = (xie), options={'disp': False}, tol = 1e-10, 
+                                    bounds = tuple(zip(np.maximum(xie - 0.1, 0.001),np.minimum(xie + 0.1, 0.999))), constraints = my_constraint)
+    
+        return distres
+

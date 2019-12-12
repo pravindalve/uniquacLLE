@@ -1,4 +1,5 @@
 from uniquaclle import UniquacLLE
+from state import State
 
 Texp = [298.15, 298.15, 298.15, 298.15, 298.15, 298.15, 298.15, 298.15]
 xIexp = [[0.8487, 0.0222, 0.1291], [0.8319, 0.0295, 0.1386], [0.815, 0.0368, 0.1482], [0.7986, 0.0439, 0.1575],
@@ -15,8 +16,32 @@ r = [1.4311, 3.1878, 5.1742]
 dataset = UniquacLLE(Texp, xIexp, xIIexp, a, q, r)
 
 # value = dataset.optimize_OF1()
-# print(value)
+# print(dataset.a_nm)
 
-bips = dataset.evaluate_BIP()
+# bips = dataset.evaluate_BIP()
+# print(bips)
 
-print(bips)
+s1 = State(Texp[0], xIexp[0],xIIexp[0], a, q, r)
+s = 1
+m = 1
+dist1 = 1
+dist2 = 1
+coef1 = 1
+coef2 = 2
+while dist1 > 1e-6 or dist2 > 1e-6 or abs(coef1 - coef2) > 50:
+	s1.update_xcalc()
+	dist1res = s1.min_tan_dist(s1.xIcalc)
+	dist2res = s1.min_tan_dist(s1.xIIcalc)
+
+	if dist1 > dist1res.fun:
+		dist1 = dist1res.fun
+	if dist2 > dist2res.fun:
+		dist2 = dist2res.fun
+
+	s +=1
+	if s > 60:
+		break
+
+
+print(s1.xIexp, s1.xIIexp)
+print(s1.xIcalc, s1.xIIcalc)

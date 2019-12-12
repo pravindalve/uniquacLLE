@@ -62,6 +62,17 @@ class UniquacLLE():
             self.states[i].a = self.a_nm[i]
         return opt
 
+    def OF2(self):
+        sum = 0 
+        for s in self.states:
+            sum = sum + (np.sum(abs(s.xIexp - s.xIcalc)) + np.sum(abs(s.xIiter - s.xIcalc)) + np.sum(abs(s.xIexp - s.xIiter)) +
+                    np.sum(abs(s.xIIexp - s.xIIcalc)) + np.sum(abs(s.xIIiter - s.xIIcalc)) + np.sum(abs(s.xIIexp - s.xIIiter)))
+
+        return sum
+
+    def OF(self):
+        return np.sqrt(np.square(self.OF1()) + np.square(self.OF2()))
+        
 
     def evaluate_BIP(self):
         print('This function is not yet implemented')
